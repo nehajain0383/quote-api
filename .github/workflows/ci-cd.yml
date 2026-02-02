@@ -17,28 +17,35 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2️⃣ Set up Java 17
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: temurin
-          java-version: 17
+#      # 2️⃣ Set up Java 17
+#      - name: Set up Java
+#        uses: actions/setup-java@v3
+#        with:
+#          distribution: temurin
+#          java-version: 17
 
-      # 3️⃣ Build Spring Boot executable JAR
-      - name: Build JAR
-        run: ./mvnw clean package spring-boot:repackage
-
-      # Log in to AWS ECR
+      # Step 2: Log in to AWS ECR
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+#        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/amazon-ecr-login@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Log in to AWS ECR
+      # 3️⃣ Build Docker image
+      - name: Build Docker image
         run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REPOSITORY }}
+          docker build -t ${{ secrets.ECR_REPOSITORY }}:latest .
+
+      # 3️⃣ Build Spring Boot executable JAR
+#      - name: Build JAR
+#        run: ./mvnw clean package spring-boot:repackage
+
+      # Step 4: Push Docker image to ECR
+      - name: Push Docker image
+        run: |
+          docker push ${{ secrets.ECR_REPOSITORY }}:latest
 
       # 4️⃣ Log in to Docker Hub -- no need to deploy in docker hub if using aws or gcp
 #      - name: Log in to Docker Hub
@@ -47,33 +54,59 @@ jobs:
 #          username: ${{ secrets.DOCKER_USERNAME }}
 #          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # 5️⃣ Build Docker image
-      - name: Build Docker image
-        run: docker build -t quoteapi:latest .
+
 
       # 6️⃣ Tag Docker image for Docker Hub
 #      - name: Tag Docker image
 #        run: docker tag quoteapi:latest ${{ secrets.DOCKER_USERNAME }}/quoteapi:latest
 
-      - name: Tag Docker image for ECR
-        run: docker tag quoteapi:latest ${{ secrets.ECR_REPOSITORY }}:latest
+#      - name: Tag Docker image for ECR
+#        run: docker tag quoteapi:latest ${{ secrets.ECR_REPOSITORY }}:latest
 
       # 7️⃣ Push Docker image to Docker Hub
 #      - name: Push Docker image
 #        run: docker push ${{ secrets.DOCKER_USERNAME }}/quoteapi:latest
 
+      # Step 5: Deploy to AWS App Runner
       - name: Deploy to AWS App Runner
-        run: |
-          aws apprunner create-service \
-            --service-name quoteapi-service \
-            --source-configuration '{
-                "ImageRepository": {
-                "ImageIdentifier": "${{ secrets.ECR_REPOSITORY }}:latest",
-                "ImageRepositoryType": "ECR"
-                }
-              }' \
-            --instance-configuration Cpu=1024,Memory=2048
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECR_REPO: ${{ secrets.ECR_REPOSITORY }}
+          SERVICE_NAME: quoteapi-service
+        run: |
+          # Check if App Runner service already exists
+          SERVICE_EXISTS=$(aws apprunner list-services --region $AWS_REGION \
+            --query "ServiceSummaryList[?ServiceName=='$SERVICE_NAME'].ServiceName" \
+            --output text)
+            
+          if [ -z "$SERVICE_EXISTS" ]; then
+            echo "Creating App Runner service..."
+            aws apprunner create-service \
+              --service-name $SERVICE_NAME \
+              --source-configuration '{
+                "ImageRepository": {
+                  "ImageIdentifier": "'"$ECR_REPO"':latest",
+                  "ImageRepositoryType": "ECR",
+                  "ImageConfiguration": { "Port": "8080" }
+                }
+              }' \
+              --instance-configuration Cpu=1024,Memory=2048
+          else
+            echo "Updating existing App Runner service..."
+            SERVICE_ARN=$(aws apprunner list-services --region $AWS_REGION \
+              --query "ServiceSummaryList[?ServiceName=='$SERVICE_NAME'].ServiceArn" \
+              --output text)
+          
+            aws apprunner update-service \
+              --service-arn $SERVICE_ARN \
+              --source-configuration '{
+                "ImageRepository": {
+                  "ImageIdentifier": "'"$ECR_REPO"':latest",
+                  "ImageRepositoryType": "ECR",
+                  "ImageConfiguration": { "Port": "8080" }
+                }
+              }' \
+              --instance-configuration Cpu=1024,Memory=2048
+          fi
