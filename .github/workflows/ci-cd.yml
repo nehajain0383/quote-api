@@ -24,14 +24,17 @@ jobs:
 #          distribution: temurin
 #          java-version: 17
 
-      # Step 2: Log in to AWS ECR
+      # Step 2: Configure AWS credentials (THIS WAS MISSING)
       - name: Configure AWS Credentials
-#        uses: aws-actions/configure-aws-credentials@v2
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-#          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
+
+      # Step 3 — Login to ECR (now it works)
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
 
       # 3️⃣ Build Docker image
       - name: Build Docker image
