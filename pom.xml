@@ -21,6 +21,19 @@
         <relativePath/>
     </parent>
 
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>4.0.2</version>
+                <configuration>
+                    <mainClass>com.neha.quoteapi.QuoteApiApplication</mainClass>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
     <dependencies>
         <!-- REST API support -->
         <dependency>
