@@ -28,6 +28,7 @@ jobs:
       - name: Build JAR
         run: ./mvnw clean package spring-boot:repackage
 
+      # Log in to AWS ECR
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -65,5 +66,14 @@ jobs:
         run: |
           aws apprunner create-service \
             --service-name quoteapi-service \
-            --source-configuration ImageRepository={"ImageIdentifier":"${{ secrets.ECR_REPOSITORY }}:latest","ImageRepositoryType":"ECR"} \
+            --source-configuration '{
+                "ImageRepository": {
+                "ImageIdentifier": "${{ secrets.ECR_REPOSITORY }}:latest",
+                "ImageRepositoryType": "ECR"
+                }
+              }' \
             --instance-configuration Cpu=1024,Memory=2048
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
