@@ -51,9 +51,13 @@ jobs:
       - name: Deploy to AWS App Runner
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPO: ${{ secrets.ECR_REPOSITORY }}
           SERVICE_NAME: quoteapi-service
         run: |
+          IMAGE_URI=$ECR_REGISTRY/$ECR_REPO:latest
+          echo "Using image: $IMAGE_URI"
+          
           # Check if App Runner service already exists
           SERVICE_EXISTS=$(aws apprunner list-services --region $AWS_REGION \
             --query "ServiceSummaryList[?ServiceName=='$SERVICE_NAME'].ServiceName" \
@@ -65,7 +69,7 @@ jobs:
               --service-name $SERVICE_NAME \
               --source-configuration '{
                 "ImageRepository": {
-                  "ImageIdentifier": "'"$ECR_REPO"':latest",
+                  "ImageIdentifier": \"$IMAGE_URI\",
                   "ImageRepositoryType": "ECR",
                   "ImageConfiguration": { "Port": "8080" }
                 }
@@ -81,7 +85,7 @@ jobs:
               --service-arn $SERVICE_ARN \
               --source-configuration '{
                 "ImageRepository": {
-                  "ImageIdentifier": "'"$ECR_REPO"':latest",
+                  "ImageIdentifier": \"$IMAGE_URI\",
                   "ImageRepositoryType": "ECR",
                   "ImageConfiguration": { "Port": "8080" }
                 }
