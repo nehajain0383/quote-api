@@ -2,11 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+    branches: ["main"]
 
 jobs:
   build-and-docker:
@@ -15,18 +11,17 @@ jobs:
     steps:
       # 1️⃣ Checkout repo
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
-#      # 2️⃣ Set up Java 17
-#      - name: Set up Java
-#        uses: actions/setup-java@v3
-#        with:
-#          distribution: temurin
-#          java-version: 17
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
 
       # Step 2: Configure AWS credentials (THIS WAS MISSING)
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -34,8 +29,8 @@ jobs:
 
       # Step 3 — Login to ECR (now it works)
       - name: Login to Amazon ECR
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
-
 
       # 3️⃣ Build Spring Boot executable JAR
       - name: Build JAR
@@ -44,40 +39,17 @@ jobs:
       # 3️⃣ Build Docker image
       - name: Build Docker image
         run: |
-          docker build -t ${{ secrets.ECR_REPOSITORY }}:latest .
-
-
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest .
 
       # Step 4: Push Docker image to ECR
       - name: Push Docker image
         run: |
-          docker push ${{ secrets.ECR_REPOSITORY }}:latest
+          docker push ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest
 
-      # 4️⃣ Log in to Docker Hub -- no need to deploy in docker hub if using aws or gcp
-#      - name: Log in to Docker Hub
-#        uses: docker/login-action@v2
-#        with:
-#          username: ${{ secrets.DOCKER_USERNAME }}
-#          password: ${{ secrets.DOCKER_PASSWORD }}
-
-
-
-      # 6️⃣ Tag Docker image for Docker Hub
-#      - name: Tag Docker image
-#        run: docker tag quoteapi:latest ${{ secrets.DOCKER_USERNAME }}/quoteapi:latest
-
-#      - name: Tag Docker image for ECR
-#        run: docker tag quoteapi:latest ${{ secrets.ECR_REPOSITORY }}:latest
-
-      # 7️⃣ Push Docker image to Docker Hub
-#      - name: Push Docker image
-#        run: docker push ${{ secrets.DOCKER_USERNAME }}/quoteapi:latest
 
       # Step 5: Deploy to AWS App Runner
       - name: Deploy to AWS App Runner
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           ECR_REPO: ${{ secrets.ECR_REPOSITORY }}
           SERVICE_NAME: quoteapi-service
