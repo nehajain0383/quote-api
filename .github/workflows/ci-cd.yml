@@ -69,7 +69,7 @@ jobs:
               --service-name $SERVICE_NAME \
               --source-configuration '{
                 "ImageRepository": {
-                  "ImageIdentifier": \"$IMAGE_URI\",
+                  "ImageIdentifier": $IMAGE_URI,
                   "ImageRepositoryType": "ECR",
                   "ImageConfiguration": { "Port": "8080" }
                 }
@@ -85,7 +85,7 @@ jobs:
               --service-arn $SERVICE_ARN \
               --source-configuration '{
                 "ImageRepository": {
-                  "ImageIdentifier": \"$IMAGE_URI\",
+                  "ImageIdentifier": $IMAGE_URI,
                   "ImageRepositoryType": "ECR",
                   "ImageConfiguration": { "Port": "8080" }
                 }
