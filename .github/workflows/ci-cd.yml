@@ -32,22 +32,22 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      # 3️⃣ Build Spring Boot executable JAR
+      # Step 4 - Build Spring Boot executable JAR
       - name: Build JAR
         run: ./mvnw clean package spring-boot:repackage
 
-      # 3️⃣ Build Docker image
+      # Step 5 - Build Docker image
       - name: Build Docker image
         run: |
           docker build -t ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest .
 
-      # Step 4: Push Docker image to ECR
+      # Step 6: Push Docker image to ECR
       - name: Push Docker image
         run: |
           docker push ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:latest
 
 
-      # Step 5: Deploy to AWS App Runner
+      # Step 7: Deploy to AWS App Runner
       - name: Deploy to AWS App Runner
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
