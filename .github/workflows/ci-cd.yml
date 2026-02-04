@@ -68,10 +68,13 @@ jobs:
             aws apprunner create-service \
               --service-name $SERVICE_NAME \
               --source-configuration "{
+                \"AuthenticationConfiguration\": {
+                  \"AccessRoleArn\": \"arn:aws:iam::820941632575:role/AppRunnerECRAccessRole\"
+                },
                 \"ImageRepository\": {
-                \"ImageIdentifier\": \"$IMAGE_URI\",
-                \"ImageRepositoryType\": \"ECR\",
-                \"ImageConfiguration\": { \"Port\": \"8080\" }
+                  \"ImageIdentifier\": \"$IMAGE_URI\",
+                  \"ImageRepositoryType\": \"ECR\",
+                  \"ImageConfiguration\": { \"Port\": \"8080\" }
                 }
               }" \
               --instance-configuration Cpu=1024,Memory=2048
@@ -84,10 +87,13 @@ jobs:
             aws apprunner update-service \
               --service-arn $SERVICE_ARN \
               --source-configuration "{
+                \"AuthenticationConfiguration\": {
+                  \"AccessRoleArn\": \"arn:aws:iam::820941632575:role/AppRunnerECRAccessRole\"
+                },
                 \"ImageRepository\": {
-                \"ImageIdentifier\": \"$IMAGE_URI\",
-                \"ImageRepositoryType\": \"ECR\",
-                \"ImageConfiguration\": { \"Port\": \"8080\" }
+                  \"ImageIdentifier\": \"$IMAGE_URI\",
+                  \"ImageRepositoryType\": \"ECR\",
+                  \"ImageConfiguration\": { \"Port\": \"8080\" }
                 }
               }" \
               --instance-configuration Cpu=1024,Memory=2048
